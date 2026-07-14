@@ -1,0 +1,3062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Expense Tracker v15.43 • Firebase</title>
+    
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="data:application/manifest+json,{
+        %22name%22:%22Expense Tracker%22,
+        %22short_name%22:%22Expenses%22,
+        %22start_url%22:%22./%22,
+        %22display%22:%22standalone%22,
+        %22background_color%22:%22%23ffffff%22,
+        %22theme_color%22:%22%23f97316%22,
+        %22orientation%22:%22portrait-primary%22,
+        %22icons%22:[{%22src%22:%22data:image/svg+xml,%253Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%253E%253Crect width=%27100%27 height=%27100%27 fill=%27%2523f97316%27 rx=%2720%27/%253E%253Ctext x=%2750%27 y=%2775%27 font-size=%2775%27 font-weight=%27bold%27 text-anchor=%27middle%27 fill=%27%25231e3a5f%27 font-family=%27Arial, sans-serif%27%253E₹%253C/text%253E%253C/svg%253E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}]
+    }">
+    <meta name="theme-color" content="#f97316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Expenses">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f97316' rx='20'/%3E%3Ctext x='50' y='75' font-size='75' font-weight='bold' text-anchor='middle' fill='%23ef4444' font-family='Arial, sans-serif'%3E₹%3C/text%3E%3C/svg%3E">
+    
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 16px;
+            padding-bottom: 100px;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        /* Desktop/Mac optimizations */
+        @media (min-width: 768px) {
+            body {
+                padding: 40px 20px;
+            }
+
+            .container {
+                max-width: 600px;
+            }
+
+            .header {
+                padding: 32px;
+            }
+
+            .inline-form-wrap {
+                left: 32px;
+                right: 32px;
+            }
+
+            .header h1 {
+                font-size: 32px;
+            }
+
+            .tabs {
+                gap: 12px;
+            }
+
+            .tab {
+                padding: 16px 20px;
+                font-size: 15px;
+            }
+
+            .add-btn-top {
+                padding: 18px;
+                font-size: 16px;
+            }
+
+            .section {
+                padding: 28px;
+            }
+
+            .transaction {
+                padding: 20px;
+            }
+
+            .modal-content {
+                max-width: 600px;
+            }
+
+            /* Hover effects only on desktop */
+            .transaction:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 16px 32px rgba(59, 130, 246, 0.15);
+            }
+
+            .btn:hover {
+                transform: translateY(-2px);
+            }
+
+            .category-item:hover {
+                transform: translateX(8px);
+            }
+        }
+
+        /* Large desktop */
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 700px;
+            }
+
+            .header h1 {
+                font-size: 36px;
+            }
+
+            .transaction {
+                padding: 24px;
+            }
+
+            .transaction-category {
+                font-size: 17px;
+            }
+
+            .transaction-amount {
+                font-size: 18px;
+            }
+        }
+
+        .header {
+            position: relative;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.92) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            animation: fadeInDown 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #fbbf24 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            text-align: center;
+            letter-spacing: -1px;
+        }
+
+        .sync-status {
+            display: inline;
+            padding: 0;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            margin-bottom: 0;
+            font-size: 9px;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .sync-status.connected {
+            background: transparent;
+            border-color: transparent;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .sync-status.disconnected {
+            background: transparent;
+            border-color: transparent;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .sync-indicator {
+            display: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .sync-status.disconnected .sync-indicator {
+            display: none;
+        }
+
+        .tabs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab {
+            padding: 12px 8px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            border-radius: 0;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            color: #666;
+            letter-spacing: -0.3px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .tab:hover:not(.active) {
+            color: #333;
+        }
+
+        .tab.active {
+            color: #333;
+        }
+
+        .tab:nth-child(1).active {
+            border-bottom-color: #3b82f6;
+        }
+
+        .tab:nth-child(2).active {
+            border-bottom-color: #f97316;
+        }
+
+        .tab:nth-child(3).active {
+            border-bottom-color: #a855f7;
+        }
+
+        .tab:nth-child(4).active {
+            border-bottom-color: #10b981;
+        }
+
+        .add-btn-top {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            width: 100%;
+            padding: 15px 24px;
+            background: radial-gradient(ellipse at center, rgba(220, 60, 95, 0.72) 0%, rgba(180, 30, 65, 0.38) 100%);
+            color: #fff0f3;
+            border: 1px solid rgba(220, 80, 110, 0.4);
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            text-transform: none;
+            cursor: pointer;
+            margin-top: 16px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 4px 20px rgba(220, 60, 95, 0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, background 0.25s ease;
+        }
+
+        .add-btn-top::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0) 70%);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .add-btn-top:hover::before {
+            transform: translateX(-100%);
+        }
+
+        .add-btn-top:hover {
+            transform: none;
+            background: radial-gradient(ellipse at center, rgba(220, 60, 95, 0.72) 0%, rgba(180, 30, 65, 0.38) 100%);
+            box-shadow: 0 4px 20px rgba(220, 60, 95, 0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+            border-color: rgba(220, 80, 110, 0.4);
+            color: #fff0f3;
+        }
+
+        .add-btn-top:active {
+            transform: none;
+            background: radial-gradient(ellipse at center, rgba(220, 60, 95, 0.72) 0%, rgba(180, 30, 65, 0.38) 100%);
+        }
+
+        .auth-section {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 40px 32px;
+            text-align: center;
+            animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .auth-section h2 {
+            color: #ffffff;
+            margin-bottom: 16px;
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+
+        .auth-section p {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 20px;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .auth-section a {
+            color: #667eea;
+        }
+
+        .auth-btn {
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.5);
+        }
+
+        .summary {
+            background: white;
+            border: 3px solid #10b981;
+            color: #333;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .summary-row span:last-child {
+            color: #333;
+            font-weight: 700;
+        }
+
+        .summary-row.total {
+            font-size: 16px;
+            font-weight: 800;
+            padding-top: 16px;
+            border-top: 2px solid #f0f0f0;
+            margin-top: 12px;
+            margin-bottom: 0;
+            color: #10b981;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            gap: 8px;
+        }
+        
+        .summary-row.total span {
+            white-space: nowrap;
+        }
+
+        .summary-row.total span:last-child {
+            color: #10b981;
+            font-size: 15px;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border: none;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+        }
+
+        .section h2 {
+            font-size: 14px;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .transactions {
+            display: none;
+        }
+
+        .transactions.active {
+            display: block;
+        }
+
+        .transaction {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+            padding: 16px;
+            border-radius: 14px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            border-left: 4px solid #3b82f6;
+            border-right: 4px solid #8b5cf6;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+        }
+
+        .transaction:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.99) 0%, rgba(255, 255, 255, 0.97) 100%);
+            border-color: rgba(99, 102, 241, 0.2);
+            border-left-color: #3b82f6;
+            border-right-color: #8b5cf6;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.12);
+        }
+
+        .transaction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .transaction-category {
+            font-weight: 700;
+            color: #1f2937;
+            font-size: 15px;
+            letter-spacing: -0.3px;
+        }
+
+        .transaction-amount {
+            font-size: 16px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .transaction-details {
+            font-size: 12px;
+            color: #6b7280;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .transaction-detail {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 20px 18px;
+            width: 100%;
+            max-width: 480px;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 7px;
+            font-size: 15px;
+            letter-spacing: -0.3px;
+        }
+
+        .form-label::before {
+            content: '';
+            display: none;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(10, 5, 0, 0.55);
+            border: 2px solid rgba(255, 200, 100, 0.35);
+            border-radius: 11px;
+            font-size: 15px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            color: white;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Filter dropdown in transaction headers */
+        .transaction-filter {
+            background: white !important;
+            border: 2px solid #10b981 !important;
+            color: #333 !important;
+            padding: 8px 12px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
+        }
+
+        .transaction-filter:hover {
+            border-color: #059669 !important;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+        }
+
+        .transaction-filter:focus {
+            outline: none !important;
+            border-color: #047857 !important;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2) !important;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 11px;
+            margin-top: 17px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            letter-spacing: -0.3px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: left 0.3s ease;
+            z-index: 0;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 10px 32px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 48px rgba(59, 130, 246, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            border: none;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 10px 32px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            box-shadow: 0 16px 48px rgba(139, 92, 246, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .category-breakdown {
+            margin-top: 10px;
+        }
+
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: rgba(99, 102, 241, 0.08);
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .category-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .category-item:hover {
+            background: #e9ecef;
+            transform: translateX(2px);
+        }
+
+        .category-name {
+            color: #666;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .category-amount {
+            font-weight: 700;
+            color: #10b981;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+        }
+
+        .empty-state-icon {
+            font-size: 56px;
+            margin-bottom: 12px;
+            opacity: 0.4;
+        }
+
+        .delete-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            width: auto;
+            margin-top: 10px;
+            display: inline-block;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .delete-btn:active {
+            transform: scale(0.95);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 24px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin: 24px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .user-name-display {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-weight: 700;
+            color: #667eea;
+            text-align: center;
+        }
+
+        .month-nav-btn {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .month-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .month-nav-btn:active {
+            transform: translateY(0);
+        }
+
+        .back-to-current-btn {
+            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+            border: none;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(168, 85, 247, 0.6);
+        }
+
+        .back-to-current-btn:hover {
+            box-shadow: 0 12px 40px rgba(168, 85, 247, 0.7);
+        }
+
+        .month-selector {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .month-selector.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .month-selector-content {
+            background: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 32px 28px;
+            width: 100%;
+            max-width: 480px;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .month-selector-header {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .month-option {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .month-option:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .month-option:active {
+            transform: scale(0.98);
+        }
+
+        .month-option-name {
+            font-weight: 700;
+            color: white;
+            font-size: 15px;
+            margin-bottom: 6px;
+            letter-spacing: -0.3px;
+        }
+
+        .month-option-total {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .current-month-indicator {
+            display: inline-block;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            margin-left: 8px;
+            font-weight: 700;
+        }
+
+        /* Settlement Tracker Styles */
+        .settlement-header-section {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+
+        .settlement-month-item {
+            background: white;
+            padding: 18px 20px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settlement-month-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: #10b981;
+        }
+
+        .settlement-month-item:active {
+            transform: scale(0.98);
+        }
+
+        .settlement-month-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .settlement-month-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .settlement-month-status.settled {
+            background: #d1fae5;
+            color: #059669;
+            border: 2px solid #10b981;
+        }
+
+        .settlement-month-status.not-settled {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 2px solid #ef4444;
+        }
+
+        .settlement-container {
+            padding: 0;
+        }
+
+        .settlement-summary {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 3px solid #10b981;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
+        }
+
+        .settlement-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .settlement-row:last-child {
+            border-bottom: none;
+            padding-top: 18px;
+            margin-top: 10px;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        .settlement-label {
+            font-size: 15px;
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .settlement-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: #1f2937;
+        }
+
+        .settlement-value.total {
+            font-size: 24px;
+            color: #ef4444;
+        }
+
+        .settlement-value.positive {
+            color: #10b981;
+        }
+
+        .settlement-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid;
+        }
+
+        .settlement-status-badge.pending {
+            background: #fef3c7;
+            color: #f59e0b;
+            border-color: #fde68a;
+        }
+
+        .settlement-status-badge.pending:hover {
+            background: #fde68a;
+            transform: translateY(-2px);
+        }
+
+        .settlement-status-badge.settled {
+            background: #d1fae5;
+            color: #10b981;
+            border-color: #a7f3d0;
+        }
+
+        .settlement-remark {
+            display: inline-block;
+            margin-left: 12px;
+            padding: 6px 12px;
+            background: white;
+            border: 2px solid #10b981;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .settlement-actions {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        /* Modal for settlement remark */
+        .remark-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .remark-modal.active {
+            display: flex;
+        }
+
+        .remark-modal-content {
+            background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .remark-modal-header {
+            font-size: 20px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .remark-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 15px;
+            color: white;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .remark-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .remark-modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .remark-modal-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .remark-modal-btn.primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .remark-modal-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    
+        /* ── Card-from-deck inline form ── */
+
+        /* The button becomes the "deck" - needs relative + z-index */
+        .add-btn-wrapper {
+            position: relative;
+            z-index: 999;
+            margin-top: 16px;
+        }
+
+        .card-clip {
+            position: relative;
+        }
+
+        .add-btn-top {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        .add-btn-top.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease 0.5s;  /* fade AFTER card fully out */
+        }
+
+        /* Card slides out from BEHIND/BELOW the button */
+        .card-shell {
+            position: relative;
+            height: 0;            /* takes no layout space, doesn't affect gap to next tile */
+            overflow: visible;
+        }
+
+        .card-mask {
+            position: absolute;
+            left: 28px;
+            right: 28px;
+            top: -22px;
+            height: 0;
+            overflow: hidden;
+            border-radius: 0 0 16px 16px;
+            z-index: 999;
+            pointer-events: none;
+            transition: height 0.45s cubic-bezier(0.16, 0.7, 0.25, 1);
+        }
+
+        .card-mask.open {
+            height: var(--card-h, 700px);
+            pointer-events: all;
+            transition: height 0.45s cubic-bezier(0.16, 0.7, 0.25, 1);
+        }
+
+        .card-mask.closing {
+            height: 0;
+            pointer-events: none;
+            transition: height 0.35s cubic-bezier(0.6, 0, 0.35, 1);
+        }
+
+        .inline-form-wrap {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        /* Connector strip — visually ties the card to the button across the gap */
+        .card-connector {
+            position: absolute;
+            left: 28px;
+            right: 28px;
+            top: -22px;
+            height: 22px;
+            z-index: 998;
+            border-radius: 0;
+            background: linear-gradient(135deg, rgba(220,60,95,0.55), rgba(180,30,65,0.3));
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .card-connector.visible {
+            opacity: 1;
+        }
+
+        
+
+        .inline-form {
+            background: #ffffff;
+            border-radius: 0 0 16px 16px;
+            border: 1px solid rgba(220, 80, 110, 0.2);
+            padding: 16px 16px 14px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.25), 0 4px 12px rgba(220,80,110,0.1);
+        }
+
+        /* fold shadow at the top edge — reads as "emerging from tab" */
+        .inline-form::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 10px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.08), transparent);
+            pointer-events: none;
+        }
+
+        /* Faint lines on card like ruled paper - deck feel */
+        .inline-form::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 18px; right: 18px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(220,80,110,0.4), transparent);
+            border-radius: 0 0 4px 4px;
+        }
+
+        .inline-form .form-label {
+            color: #444;
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 3px;
+            display: block;
+        }
+
+        .inline-form .form-input,
+        .inline-form .form-select {
+            background: #fafafa;
+            border: 1.5px solid #e8e8e8;
+            color: #222;
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 13px;
+            font-weight: 500;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .inline-form .form-input:focus,
+        .inline-form .form-select:focus {
+            outline: none;
+            border-color: #dc5070;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(220, 80, 110, 0.1);
+        }
+
+        .inline-form .form-group {
+            margin-bottom: 7px;
+        }
+
+        .inline-form-btns {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .inline-form-btns .btn-cancel {
+            flex: 1;
+            padding: 9px;
+            background: #f2f2f2;
+            color: #666;
+            border: none;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .inline-form-btns .btn-cancel:hover { background: #e5e5e5; }
+
+        .inline-form-btns .btn-save {
+            flex: 1;
+            padding: 9px;
+            background: linear-gradient(135deg, #dc5070, #b02050);
+            color: #fff;
+            border: none;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(220, 80, 110, 0.3);
+            transition: opacity 0.2s;
+        }
+
+        .inline-form-btns .btn-save:hover { opacity: 0.88; }
+
+        /* blur out tabs + content when form open */
+        .tabs-blur {
+            transition: filter 0.4s ease, opacity 0.4s ease;
+        }
+
+        .tabs-blur.blurred {
+            filter: blur(1.5px);
+            opacity: 0.65;
+            pointer-events: none;
+        }
+
+        /* When card is open: page locked, only background content scrolls */
+        body.card-open {
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        body.card-open #main-app {
+            height: calc(100vh - 20px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.card-open .header {
+            flex-shrink: 0;
+        }
+
+        body.card-open .card-shell {
+            flex-shrink: 0;
+        }
+
+        body.card-open #main-content-blur {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            min-height: 0;
+        }
+
+        </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Auth Section (shown when not connected) -->
+        <div id="auth-section" class="auth-section">
+            <h2>💰 Expense Tracker</h2>
+            <p>Track expenses between Chandan and Arpita</p>
+            <p style="font-size: 14px; color: #999; margin: 16px 0;">Gmail login required</p>
+            <button class="auth-btn" onclick="handleAuthClick()">🔐 Login with Google →</button>
+        </div>
+
+        <!-- Access Denied Section (shown when wrong email) -->
+        <div id="access-denied-section" style="display: none;"></div>
+
+        <!-- Main App (shown when connected) -->
+        <div id="main-app" style="display: none;">
+            <!-- Back to Current Month Button (shown when viewing old month) -->
+            <button id="back-to-current-btn" class="month-nav-btn back-to-current-btn" style="display: none;" onclick="backToCurrentMonth()">
+                ← Back to Current Month
+            </button>
+
+            <div class="header">
+                <h1>₹ Expense Tracker</h1>
+                <div class="tabs tabs-blur" id="tabs-blur">
+                    <button class="tab active" onclick="switchTab('monthly')">Expense</button>
+                    <button class="tab" onclick="switchTab('travel')">Travel Expense</button>
+                    <button class="tab" onclick="switchTab('personal')">Personal</button>
+                    <button class="tab" onclick="switchTab('settlement')">Monthly Settlement</button>
+                </div>
+                <div class="add-btn-wrapper">
+                <button class="add-btn-top" id="add-btn-top" onclick="openInlineForm()"><span style="font-size:20px;line-height:1;margin-right:2px">+</span>Add New Expense</button>
+
+                </div><!-- end add-btn-wrapper -->
+            </div><!-- end header -->
+
+            <!-- Card shell: clean wrapper, NO border-radius/backdrop-filter so absolute child is never clipped -->
+            <div class="card-shell">
+            <div class="card-connector" id="card-connector"></div>
+            <!-- Mask controls reveal height; card content slides within it -->
+            <div class="card-mask" id="card-mask">
+            <div class="inline-form-wrap" id="inline-form-wrap">
+                <div class="inline-form">
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" id="if-expense-type" onchange="ifUpdateCategories()">
+                            <option value="monthly">Expense</option>
+                            <option value="travel">Travel Expense</option>
+                            <option value="personal">Personal</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" class="form-input" id="if-date">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="if-category">
+                            <option value="Grocery">Grocery</option>
+                            <option value="Outside Food">Outside Food</option>
+                            <option value="Travel Within City">Travel Within City</option>
+                            <option value="Rent+Electricity">Rent+Electricity</option>
+                            <option value="Vegetables">Vegetables</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-input" id="if-description" placeholder="Enter details...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount (₹)</label>
+                        <input type="number" class="form-input" id="if-amount" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Payment Mode</label>
+                        <select class="form-select" id="if-mode">
+                            <option value="Online">Online</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Credit Card">Credit Card</option>
+                        </select>
+                    </div>
+                    <div class="inline-form-btns">
+                        <button class="btn-cancel" onclick="closeInlineForm()">Cancel</button>
+                        <button class="btn-save" onclick="saveInlineForm()">Save Expense</button>
+                    </div>
+                </div>
+            </div><!-- end inline-form-wrap -->
+            </div><!-- end card-mask -->
+            </div><!-- end card-shell -->
+
+            <div id="main-content-blur" class="tabs-blur"><!-- Monthly Tab -->
+            <div id="monthly-tab" class="transactions active">
+                <div class="summary">
+                    <div class="summary-row">
+                        <span>🧑 Chandan:</span>
+                        <span id="monthly-chandan">₹0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>👩 Arpita:</span>
+                        <span id="monthly-arpita">₹0</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total:</span>
+                        <span id="monthly-total">₹0</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>📊 Category Breakdown</h2>
+                    <div id="monthly-categories" class="category-breakdown"></div>
+                </div>
+
+                <div class="section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="margin: 0;">📝 Transactions</h2>
+                        <select id="monthly-filter" class="transaction-filter" onchange="updateDisplay()">
+                            <option value="all">All</option>
+                            <option value="Chandan">Chandan</option>
+                            <option value="Arpita">Arpita</option>
+                        </select>
+                    </div>
+                    <div id="monthly-list"></div>
+                </div>
+            </div>
+
+            <!-- Travel Tab -->
+            <div id="travel-tab" class="transactions">
+                <div class="summary">
+                    <div class="summary-row">
+                        <span>🧑 Chandan:</span>
+                        <span id="travel-chandan">₹0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>👩 Arpita:</span>
+                        <span id="travel-arpita">₹0</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total:</span>
+                        <span id="travel-total">₹0</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>📊 Category Breakdown</h2>
+                    <div id="travel-categories" class="category-breakdown"></div>
+                </div>
+
+                <div class="section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="margin: 0;">📝 Transactions</h2>
+                        <select id="travel-filter" class="transaction-filter" onchange="updateDisplay()">
+                            <option value="all">All</option>
+                            <option value="Chandan">Chandan</option>
+                            <option value="Arpita">Arpita</option>
+                        </select>
+                    </div>
+                    <div id="travel-list"></div>
+                </div>
+            </div>
+
+            <!-- Personal Tab -->
+            <div id="personal-tab" class="transactions">
+                <div class="summary">
+                    <div class="summary-row total">
+                        <span id="personal-user-label">My Personal:</span>
+                        <span id="personal-total">₹0</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>📊 Category Breakdown</h2>
+                    <div id="personal-categories" class="category-breakdown"></div>
+                </div>
+
+                <div class="section">
+                    <h2>📝 Transactions</h2>
+                    <div id="personal-list"></div>
+                </div>
+            </div>
+
+            <!-- Monthly Settlement Tab -->
+            <div id="settlement-tab" class="transactions">
+                <div class="settlement-header-section">
+                    <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Monthly Settlement</h2>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 14px;">Select a month to view settlement details</p>
+                </div>
+
+                <!-- Month List View -->
+                <div class="section" id="settlement-month-list" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981; padding: 20px;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 16px;">Select Month</h3>
+                    <div id="settlement-months-container"></div>
+                </div>
+
+                <!-- Settlement Detail View (hidden initially) -->
+                <div class="section" id="settlement-detail-view" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981; padding: 30px; display: none;">
+                    <button onclick="backToMonthList()" style="background: rgba(255,255,255,0.5); border: 2px solid #10b981; color: #059669; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; margin-bottom: 20px;">
+                        ← Back to Month List
+                    </button>
+                    <div id="settlement-content"></div>
+                </div>
+            </div>
+
+            <!-- View Previous Months Button -->
+            <button class="month-nav-btn" onclick="openMonthSelector()">
+                View Previous Months
+            </button>
+            
+            <!-- Version Info -->
+            <div style="text-align: center; padding: 20px 10px 10px 10px; color: rgba(255, 255, 255, 0.7); font-size: 11px; font-weight: 600;">
+                <div style="font-size: 9px; color: rgba(255, 255, 255, 0.5); margin-bottom: 8px;">
+                    <span id="sync-status">Synced as Chandan</span>
+                </div>
+                Expense Tracker v15.43 • Firebase
+                <div style="margin-top: 8px; font-size: 12px;">
+                    <a href="#" onclick="downloadExpenseData(); return false;" style="color: #3b82f6; text-decoration: none; font-weight: 600; cursor: pointer;">
+                        Download data in Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remark Modal -->
+        <div id="remarkModal" class="remark-modal">
+            <div class="remark-modal-content">
+                <div class="remark-modal-header">Add Settlement Remark</div>
+                <input type="text" id="remarkInput" class="remark-input" placeholder="E.g., Paid via UPI, Cash given, etc." maxlength="50">
+                <div class="remark-modal-buttons">
+                    <button class="remark-modal-btn secondary" onclick="closeRemarkModal()">Cancel</button>
+                    <button class="remark-modal-btn primary" onclick="saveRemark()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Month Selector Modal -->
+    <div id="month-selector" class="month-selector">
+        <div class="month-selector-content">
+            <div class="month-selector-header">Select Month to View</div>
+            <div id="month-options"></div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 15px;" onclick="closeMonthSelector()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="form-group">
+                <label class="form-label">Type</label>
+                <select class="form-select" id="expense-type" onchange="updateCategories()">
+                    <option value="monthly">Expense</option>
+                    <option value="travel">Travel Expense</option>
+                    <option value="personal">Personal</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-input" id="date" value="">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <select class="form-select" id="category">
+                    <option value="Grocery">Grocery</option>
+                    <option value="Outside Food">Outside Food</option>
+                    <option value="Travel Within City">Travel Within City</option>
+                    <option value="Rent+Electricity">Rent+Electricity</option>
+                    <option value="Vegetables">Vegetables</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <input type="text" class="form-input" id="description" placeholder="Enter details...">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Amount (₹)</label>
+                <input type="number" class="form-input" id="amount" placeholder="0">
+            </div>
+
+            <!-- Hidden Spent By - Auto-filled based on logged-in user -->
+            <input type="hidden" id="spent-by">
+
+            <div class="form-group">
+                <label class="form-label">Payment Mode</label>
+                <select class="form-select" id="mode">
+                    <option value="Online">Online</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Credit Card">Credit Card</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="addTransaction()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    </div><!-- end main-content-blur -->
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRAqIDorkARn737IXjF8FtGNzCBTYEBJ8",
+            authDomain: "expense-tracker-10b25.firebaseapp.com",
+            projectId: "expense-tracker-10b25",
+            storageBucket: "expense-tracker-10b25.firebasestorage.app",
+            messagingSenderId: "428842952083",
+            appId: "1:428842952083:web:116c3ba737007b73d63466"
+        };
+        
+        // Allowed email addresses
+        const ALLOWED_EMAILS = [
+            'cksasingh@gmail.com',
+            'arpitamaheshwari246@gmail.com'
+        ];
+        
+        // Initialize Firebase
+        let db, auth;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            auth = firebase.auth();
+            auth.settings.appVerificationDisabledForTesting = false;
+            console.log('✓ Firebase initialized successfully');
+        } catch (error) {
+            console.error('✗ Firebase initialization failed:', error);
+        }
+        
+        let currentTab = 'monthly';
+        let expenses = [];
+        let currentUserName = '';
+        let currentViewMonth = null;
+        let showAllTransactionsMap = {};
+        
+        const monthlyCategories = ['Grocery', 'Outside Food', 'Travel Within City', 'Rent+Electricity', 'Vegetables', 'Other'];
+        const travelCategories = ['Fuel', 'Bike Servicing', 'Food', 'Ticket', 'Stay', 'Other'];
+        const personalCategories = ['Shopping', 'Entertainment', 'Food/Drink', 'Personal Care', 'Medical', 'Gifts', 'Hobbies', 'Education', 'Other'];
+
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('date');
+            if (dateInput) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                dateInput.value = `${yyyy}-${mm}-${dd}`;
+            }
+            
+            // Set up Firebase Auth listener
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    console.log('✓ User authenticated:', user.email);
+                    
+                    // Check if email is allowed
+                    if (ALLOWED_EMAILS.includes(user.email)) {
+                        // Determine user name
+                        if (user.email.includes('cksasingh')) {
+                            currentUserName = 'Chandan';
+                        } else if (user.email.includes('arpita')) {
+                            currentUserName = 'Arpita';
+                        }
+                        
+                        document.getElementById('auth-section').style.display = 'none';
+                        document.getElementById('access-denied-section').style.display = 'none';
+                        document.getElementById('main-app').style.display = 'block';
+                        updateSyncStatus(true);
+                        loadExpenses();
+                        console.log('✓ Access granted for:', currentUserName);
+                    } else {
+                        // Email not allowed
+                        console.log('✗ Access denied for:', user.email);
+                        document.getElementById('auth-section').style.display = 'none';
+                        document.getElementById('main-app').style.display = 'none';
+                        document.getElementById('access-denied-section').style.display = 'block';
+                        // Show logout button
+                        showAccessDenied(user.email);
+                    }
+                } else {
+                    console.log('✗ User not authenticated');
+                    document.getElementById('auth-section').style.display = 'block';
+                    document.getElementById('main-app').style.display = 'none';
+                    document.getElementById('access-denied-section').style.display = 'none';
+                    updateSyncStatus(false);
+                }
+            });
+        });
+
+        function initGoogleAPIs() {
+            // Firebase version - no Google APIs needed
+        }
+
+        async function initializeGapiClient() {
+            // Firebase version - skipped
+        }
+
+        function initializeGIS() {
+            // Firebase version - skipped
+        }
+
+        function maybeEnableButtons() {
+            // Firebase version - skipped
+        }
+
+        function refreshToken() {
+            // Firebase version - no token refresh needed
+        }
+
+        // Wrapper for API calls
+        async function callWithAuth(apiCallFunction) {
+            // Firebase version - just call the function
+            return await apiCallFunction();
+        }
+
+        let refreshInterval = null;
+        
+        function startTokenRefresh() {
+            // Firebase version - no token refresh needed
+        }
+        
+        // Firebase version - no token management needed
+
+        function handleAuthClick() {
+            console.log('Attempting Google Sign-In...');
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.setCustomParameters({
+                'hd': 'gmail.com'
+            });
+            
+            auth.signInWithPopup(provider)
+                .then(result => {
+                    console.log('✓ Google Sign-In successful:', result.user.email);
+                })
+                .catch(error => {
+                    console.error('✗ Sign in failed:', error.code, error.message);
+                    alert('Login failed: ' + error.message);
+                });
+        }
+        
+        function showAccessDenied(email) {
+            const section = document.getElementById('access-denied-section');
+            section.innerHTML = `
+                <div class="auth-section" style="text-align: center; padding: 60px 32px;">
+                    <h2>🔒 Access Denied</h2>
+                    <p style="color: #999; margin: 16px 0;">Email: <strong>${email}</strong></p>
+                    <p>This expense tracker is only for:</p>
+                    <p style="font-weight: 600; color: #667eea;">cksasingh@gmail.com<br>arpitamaheshwari246@gmail.com</p>
+                    <button class="auth-btn" onclick="logout()" style="margin-top: 20px;">🚪 Try Another Account</button>
+                </div>
+            `;
+        }
+        
+        function logout() {
+            auth.signOut().then(() => {
+                console.log('✓ Logged out');
+            });
+        }
+
+        function showMainApp() {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            updateSyncStatus(true);
+        }
+
+        function updateSyncStatus(connected) {
+            const statusEl = document.getElementById('sync-status');
+            if (statusEl) {
+                statusEl.textContent = `Synced as ${currentUserName}`;
+            }
+        }
+
+        async function initializeSpreadsheet() {
+            // Firebase version - skipped
+        }
+
+        async function addHeaders(sheetName) {
+            // Firebase version - skipped
+        }
+
+        async function getOrCreateSheet(type, date) {
+            // Firebase version - skipped
+            return null;
+        }
+
+        async function loadExpenses() {
+            try {
+                const snapshot = await db.collection('expenses')
+                    .orderBy('date', 'desc')
+                    .get();
+
+                expenses = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const dateObj = new Date(data.date);
+                    const formattedDate = dateObj.toLocaleDateString('en-IN', { 
+                        day: 'numeric', 
+                        month: 'short',
+                        year: 'numeric'
+                    });
+                    
+                    expenses.push({
+                        id: doc.id,
+                        sheetName: '',
+                        rowIndex: 0,
+                        type: data.type,
+                        date: data.date,
+                        displayDate: formattedDate,
+                        category: data.category,
+                        description: data.description,
+                        spentBy: data.spentBy || 'Chandan',
+                        mode: data.mode || 'Cash',
+                        amount: data.amount || 0,
+                        createdBy: data.createdBy || 'Chandan'
+                    });
+                });
+
+                updateDisplay();
+            } catch (error) {
+                console.error('Error loading expenses:', error);
+                
+                const statusEl = document.getElementById('sync-status');
+                if (statusEl) {
+                    statusEl.textContent = 'Reconnecting...';
+                }
+                
+                setTimeout(() => {
+                    console.log('Retrying to load expenses...');
+                    loadExpenses();
+                }, 2000);
+            }
+        }
+
+        function updateCategories() {
+            const type = document.getElementById('expense-type').value;
+            const categorySelect = document.getElementById('category');
+            let categories;
+            
+            if (type === 'monthly') {
+                categories = monthlyCategories;
+            } else if (type === 'travel') {
+                categories = travelCategories;
+            } else if (type === 'personal') {
+                categories = personalCategories;
+            }
+            
+            categorySelect.innerHTML = categories.map(cat => 
+                `<option value="${cat}">${cat}</option>`
+            ).join('');
+        }
+
+        function isCardOpen() {
+            return document.getElementById('card-mask').classList.contains('open');
+        }
+
+        function isCardDirty() {
+            const desc = document.getElementById('if-description').value.trim();
+            const amount = document.getElementById('if-amount').value.trim();
+            return desc !== '' || amount !== '';
+        }
+
+        function switchTab(tab) {
+            // If card is open, handle accordingly
+            if (isCardOpen()) {
+                if (isCardDirty()) {
+                    // Fields filled — don't close, just switch tab content
+                    currentTab = tab;
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.transactions').forEach(t => t.classList.remove('active'));
+                    event.target.classList.add('active');
+                    document.getElementById(`${tab}-tab`).classList.add('active');
+                    updateDisplay();
+                    return;
+                } else {
+                    // No fields filled — retract card
+                    closeInlineForm();
+                }
+            }
+
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.transactions').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+            updateDisplay();
+        }
+
+        function openModal() {
+            document.getElementById('modal').classList.add('active');
+            document.getElementById('expense-type').value = currentTab;
+            updateCategories();
+            
+            // Set date to today in YYYY-MM-DD format
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('date').value = `${yyyy}-${mm}-${dd}`;
+            
+            // Set user name
+            document.getElementById('spent-by').value = currentUserName;
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('date').value = `${yyyy}-${mm}-${dd}`;
+            document.getElementById('description').value = '';
+            document.getElementById('amount').value = '';
+        }
+
+        async function addTransaction() {
+            const type = document.getElementById('expense-type').value;
+            const date = document.getElementById('date').value;
+            const category = document.getElementById('category').value;
+            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const spentBy = document.getElementById('spent-by').value;
+            const mode = document.getElementById('mode').value;
+
+            if (!date || !amount || amount <= 0) {
+                alert('Please fill all required fields!');
+                return;
+            }
+            
+            if (!spentBy) {
+                alert('Error: Could not determine who is adding this expense. Please refresh and try again.');
+                return;
+            }
+
+            try {
+                await db.collection('expenses').add({
+                    type: type,
+                    date: date,
+                    category: category,
+                    description: description,
+                    spentBy: spentBy,
+                    mode: mode,
+                    amount: amount,
+                    createdBy: currentUserName,
+                    userId: auth.currentUser.uid,
+                    email: auth.currentUser.email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                closeModal();
+                await loadExpenses();
+                alert('✅ Expense added and synced!');
+            } catch (error) {
+                console.error('Error adding transaction:', error);
+                alert('Error adding expense. Please try again.');
+            }
+        }
+
+        async function deleteTransaction(id) {
+            if (!confirm('Are you sure you want to delete this expense?')) {
+                return;
+            }
+
+            try {
+                await db.collection('expenses').doc(id).delete();
+                alert('✅ Expense deleted!');
+                await loadExpenses();
+            } catch (error) {
+                console.error('Error deleting:', error);
+                alert('Error deleting expense. Please try again.');
+            }
+        }
+
+        async function getSheetId(sheetName) {
+            const response = await callWithAuth(async () => {
+                return await gapi.client.sheets.spreadsheets.get({
+                    spreadsheetId: spreadsheetId
+                });
+            });
+            const sheet = response.result.sheets.find(s => s.properties.title === sheetName);
+            return sheet ? sheet.properties.sheetId : null;
+        }
+
+        function updateDisplay() {
+            // Get the month to display (either selected month or current month)
+            const now = new Date();
+            const displayMonth = currentViewMonth || now.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+            
+            ['monthly', 'travel', 'personal'].forEach(type => {
+                // Filter expenses to display month
+                let typeExpenses = expenses.filter(e => {
+                    if (e.type !== type) return false;
+                    
+                    // Check if expense is from display month
+                    const expenseDate = new Date(e.date);
+                    const expenseMonth = expenseDate.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                    return expenseMonth === displayMonth;
+                });
+                
+                // For personal tab, filter by current user only
+                if (type === 'personal') {
+                    typeExpenses = typeExpenses.filter(e => e.spentBy === currentUserName);
+                }
+                
+                // Calculate totals
+                let chandanTotal = 0;
+                let arpitaTotal = 0;
+                
+                typeExpenses.forEach(exp => {
+                    if (exp.spentBy === 'Chandan') chandanTotal += exp.amount;
+                    if (exp.spentBy === 'Arpita') arpitaTotal += exp.amount;
+                });
+                
+                const total = chandanTotal + arpitaTotal;
+                
+                // Update summary
+                if (type === 'personal') {
+                    // Personal tab shows only user's total (no name needed since it's their view)
+                    document.getElementById('personal-user-label').textContent = 'Total:';
+                    document.getElementById('personal-total').textContent = `₹${total.toLocaleString('en-IN')}`;
+                } else {
+                    document.getElementById(`${type}-chandan`).textContent = `₹${chandanTotal.toLocaleString('en-IN')}`;
+                    document.getElementById(`${type}-arpita`).textContent = `₹${arpitaTotal.toLocaleString('en-IN')}`;
+                    document.getElementById(`${type}-total`).textContent = `₹${total.toLocaleString('en-IN')}`;
+                }
+                
+                // Category breakdown
+                const categories = {};
+                typeExpenses.forEach(exp => {
+                    categories[exp.category] = (categories[exp.category] || 0) + exp.amount;
+                });
+                
+                const categoryHTML = Object.entries(categories)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([cat, amt]) => `
+                        <div class="category-item">
+                            <span class="category-name">${cat}</span>
+                            <span class="category-amount">₹${amt.toLocaleString('en-IN')}</span>
+                        </div>
+                    `).join('');
+                
+                document.getElementById(`${type}-categories`).innerHTML = categoryHTML || 
+                    `<div class="empty-state">No expenses in ${displayMonth}</div>`;
+                // Get filter value
+                const filterValue = type === 'personal' ? currentUserName : (document.getElementById(`${type}-filter`)?.value || 'all');
+                
+                // Apply filter
+                let filteredExpenses = typeExpenses;
+                if (filterValue !== 'all') {
+                    filteredExpenses = typeExpenses.filter(e => e.spentBy === filterValue);
+                }
+                
+                // Transaction list (show transactions, sorted by when they were added - newest first)
+                const sortedExpenses = filteredExpenses.sort((a, b) => {
+                    // First sort by date (newest date first)
+                    const dateCompare = new Date(b.date) - new Date(a.date);
+                    if (dateCompare !== 0) return dateCompare;
+                    
+                    // If same date, sort by rowIndex (higher row = added later = show first)
+                    return b.rowIndex - a.rowIndex;
+                });
+                
+                // Check if we should show all or just 5
+                const showAll = showAllTransactionsMap[type] || false;
+                const displayExpenses = showAll ? sortedExpenses : sortedExpenses.slice(0, 5);
+                const hasMore = sortedExpenses.length > 5;
+                
+                const listHTML = displayExpenses.map(exp => `
+                    <div class="transaction">
+                        <div class="transaction-header">
+                            <span class="transaction-category">${exp.category}</span>
+                            <span class="transaction-amount">₹${exp.amount.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div class="transaction-details">
+                            <span class="transaction-detail">${exp.displayDate}</span>
+                            ${type !== 'personal' ? `<span class="transaction-detail">👤 ${exp.spentBy}</span>` : ''}
+                            <span class="transaction-detail">💳 ${exp.mode}</span>
+                        </div>
+                        ${exp.description ? `<div style="margin-top: 8px; color: #666; font-size: 13px;">${exp.description}</div>` : ''}
+                        ${(exp.createdBy === currentUserName || exp.spentBy === currentUserName) ? `<button class="delete-btn" onclick="deleteTransaction('${exp.id}')">🗑️ Delete</button>` : ''}
+                    </div>
+                `).join('');
+                
+                const viewMoreBtn = (hasMore && !showAll) ? 
+                    `<button class="btn btn-secondary" style="width: 100%; margin-top: 15px; font-size: 14px;" onclick="toggleShowAll('${type}')">View More</button>` : 
+                    (showAll && hasMore) ? 
+                    `<button class="btn btn-secondary" style="width: 100%; margin-top: 15px; font-size: 14px;" onclick="toggleShowAll('${type}')">Show Less</button>` : '';
+                
+                document.getElementById(`${type}-list`).innerHTML = (listHTML || 
+                    `<div class="empty-state"><div class="empty-state-icon">📭</div><div>No transactions in ${displayMonth}. Tap + to add!</div></div>`) + viewMoreBtn;
+            });
+            
+            // Render settlement month list
+            renderSettlementMonthList();
+        }
+
+        // Settlement Tab Functions
+        async function getSettlementData(month) {
+            try {
+                // Fetch from Firestore
+                const docRef = db.collection('settlements').doc(month);
+                const doc = await docRef.get();
+                
+                if (doc.exists) {
+                    return doc.data();
+                } else {
+                    return { settled: false, remark: '', settledAt: null };
+                }
+            } catch (error) {
+                console.log('Error reading settlement from Firestore:', error);
+                // Fallback to localStorage
+                const key = `settlement_data_${month}`;
+                const stored = localStorage.getItem(key);
+                return stored ? JSON.parse(stored) : { settled: false, remark: '', settledAt: null };
+            }
+        }
+
+        // Function to ensure Settlements sheet exists (auto-create if needed)
+        async function ensureSettlementsSheetExists() {
+            try {
+                if (!gapi || !gapi.client || !gapi.client.sheets) {
+                    return false;
+                }
+
+                // First, check if sheet already exists
+                const response = await callWithAuth(async () => {
+                    return await gapi.client.sheets.spreadsheets.get({
+                        spreadsheetId: spreadsheetId
+                    });
+                });
+
+                const sheets = response.result.sheets || [];
+                const settlementsSheet = sheets.find(s => s.properties.title === 'Settlements');
+
+                if (settlementsSheet) {
+                    console.log('Settlements sheet already exists');
+                    return true;
+                }
+
+                // Sheet doesn't exist, create it
+                console.log('Creating Settlements sheet...');
+                
+                await callWithAuth(async () => {
+                    return await gapi.client.sheets.spreadsheets.batchUpdate({
+                        spreadsheetId: spreadsheetId,
+                        resource: {
+                            requests: [{
+                                addSheet: {
+                                    properties: {
+                                        title: 'Settlements',
+                                        gridProperties: {
+                                            rowCount: 100,
+                                            columnCount: 12
+                                        }
+                                    }
+                                }
+                            }]
+                        }
+                    });
+                });
+
+                console.log('Settlements sheet created successfully');
+
+                // Add headers
+                const headers = [
+                    'Month',
+                    'Expense_Chandan_Paid',
+                    'Expense_Arpita_Paid',
+                    'Expense_Arpita_Owes',
+                    'Travel_Chandan_Paid',
+                    'Travel_Arpita_Paid',
+                    'Travel_Arpita_Owes',
+                    'Total_Final_Amount',
+                    'Who_Owes_Whom',
+                    'Settled',
+                    'Remark',
+                    'Settled_Date'
+                ];
+
+                await callWithAuth(async () => {
+                    return await gapi.client.sheets.spreadsheets.values.update({
+                        spreadsheetId: spreadsheetId,
+                        range: 'Settlements!A1:L1',
+                        valueInputOption: 'RAW',
+                        resource: {
+                            values: [headers]
+                        }
+                    });
+                });
+
+                console.log('Settlements sheet headers added');
+                return true;
+
+            } catch (error) {
+                console.error('Error ensuring Settlements sheet exists:', error);
+                return false;
+            }
+        }
+
+        async function saveSettlementData(month, data, calculationData) {
+            try {
+                // Only Chandan can save
+                if (currentUserName !== 'Chandan') {
+                    alert('Only Chandan can mark settlements.');
+                    return false;
+                }
+                
+                // Save to Firestore
+                const docRef = db.collection('settlements').doc(month);
+                await docRef.set({
+                    settled: data.settled,
+                    remark: data.remark || '',
+                    settledAt: data.settledAt || null,
+                    changedBy: 'Chandan',
+                    changedAt: new Date().toISOString()
+                }, { merge: true });
+                
+                // Also save to localStorage as backup
+                const key = `settlement_data_${month}`;
+                localStorage.setItem(key, JSON.stringify(data));
+                
+                console.log('Settlement data saved to Firestore');
+                return true;
+            } catch (error) {
+                console.error('Error saving settlement data:', error);
+                alert('Error saving settlement. Please try again.');
+                return false;
+            }
+        }
+
+        async function renderSettlementMonthList() {
+            const container = document.getElementById('settlement-months-container');
+            
+            // Get all unique months from expenses
+            const monthsSet = new Set();
+            expenses.forEach(exp => {
+                const expenseDate = new Date(exp.date);
+                const month = expenseDate.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                monthsSet.add(month);
+            });
+            
+            // Convert to array and sort (newest first)
+            const months = Array.from(monthsSet).sort((a, b) => {
+                const dateA = new Date(a + ' 1');
+                const dateB = new Date(b + ' 1');
+                return dateB - dateA;
+            });
+            
+            if (months.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #6b7280; font-size: 16px;">No expenses yet. Start adding to see settlements!</div>';
+                return;
+            }
+            
+            // Get current month
+            const now = new Date();
+            const currentMonth = now.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+            
+            // Load all settlement data in parallel
+            const settlementDataPromises = months.map(month => getSettlementData(month));
+            const settlementDataArray = await Promise.all(settlementDataPromises);
+            
+            const monthsHTML = months.map((month, index) => {
+                const settlementData = settlementDataArray[index];
+                const statusClass = settlementData.settled ? 'settled' : 'not-settled';
+                const statusText = settlementData.settled ? 'Settled' : 'Not Settled';
+                const isCurrent = month === currentMonth;
+                
+                return `
+                    <div class="settlement-month-item" onclick="viewSettlementDetails('${month}')">
+                        <span class="settlement-month-name">
+                            ${month}
+                            ${isCurrent ? '<span style="display: inline-block; margin-left: 8px; background: #3b82f6; color: white; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;">Current</span>' : ''}
+                        </span>
+                        <span class="settlement-month-status ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = monthsHTML;
+        }
+
+        function viewSettlementDetails(month) {
+            // Hide month list, show detail view
+            document.getElementById('settlement-month-list').style.display = 'none';
+            document.getElementById('settlement-detail-view').style.display = 'block';
+            
+            // Render the details for this month
+            renderSettlementDetail(month);
+        }
+
+        function backToMonthList() {
+            // Show month list, hide detail view
+            document.getElementById('settlement-month-list').style.display = 'block';
+            document.getElementById('settlement-detail-view').style.display = 'none';
+            
+            // Refresh the month list in case status changed
+            renderSettlementMonthList();
+        }
+
+        async function renderSettlementDetail(displayMonth) {
+            const container = document.getElementById('settlement-content');
+            
+            // Calculate Monthly (Expense) - Both pay 50/50
+            const monthlyExpenses = expenses.filter(e => {
+                if (e.type !== 'monthly') return false;
+                const expenseDate = new Date(e.date);
+                const expenseMonth = expenseDate.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                return expenseMonth === displayMonth;
+            });
+            
+            let monthlyChandanTotal = 0;
+            let monthlyArpitaTotal = 0;
+            monthlyExpenses.forEach(exp => {
+                if (exp.spentBy === 'Chandan') monthlyChandanTotal += exp.amount;
+                if (exp.spentBy === 'Arpita') monthlyArpitaTotal += exp.amount;
+            });
+            
+            const monthlyTotal = monthlyChandanTotal + monthlyArpitaTotal;
+            const monthlyHalf = monthlyTotal / 2;
+            
+            // Determine who owes for monthly (50/50)
+            let monthlyArpitaOwes = 0;
+            let monthlyChandanOwes = 0;
+            if (monthlyChandanTotal > monthlyArpitaTotal) {
+                monthlyArpitaOwes = monthlyChandanTotal - monthlyHalf;
+            } else if (monthlyArpitaTotal > monthlyChandanTotal) {
+                monthlyChandanOwes = monthlyArpitaTotal - monthlyHalf;
+            }
+            
+            // Calculate Travel - Arpita pays 100%
+            const travelExpenses = expenses.filter(e => {
+                if (e.type !== 'travel') return false;
+                const expenseDate = new Date(e.date);
+                const expenseMonth = expenseDate.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                return expenseMonth === displayMonth;
+            });
+            
+            let travelChandanTotal = 0;
+            let travelArpitaTotal = 0;
+            travelExpenses.forEach(exp => {
+                if (exp.spentBy === 'Chandan') travelChandanTotal += exp.amount;
+                if (exp.spentBy === 'Arpita') travelArpitaTotal += exp.amount;
+            });
+            
+            const travelTotal = travelChandanTotal + travelArpitaTotal;
+            // Arpita should pay 100%, so if Chandan paid anything, Arpita owes that
+            const travelArpitaOwes = travelChandanTotal;
+            
+            // Calculate final settlement
+            const totalArpitaOwes = monthlyArpitaOwes + travelArpitaOwes;
+            const finalOwed = totalArpitaOwes - monthlyChandanOwes;
+            
+            // Get settlement status (now async)
+            const settlementData = await getSettlementData(displayMonth);
+            
+            container.innerHTML = `
+                <div class="settlement-summary">
+                    <h3 style="font-size: 20px; font-weight: 800; color: #1f2937; margin-bottom: 20px;">Month: ${displayMonth}</h3>
+                    
+                    <!-- Expense Section -->
+                    <div style="background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #e5e7eb;">
+                        <h4 style="font-size: 16px; font-weight: 700; color: #10b981; margin-bottom: 12px;">📊 Expense</h4>
+                        
+                        <div class="settlement-row" style="border-bottom: 1px solid #e5e7eb; padding: 8px 0;">
+                            <span class="settlement-label">Chandan Paid:</span>
+                            <span class="settlement-value" style="font-size: 16px;">₹${Math.round(monthlyChandanTotal).toLocaleString('en-IN')}</span>
+                        </div>
+                        
+                        <div class="settlement-row" style="border-bottom: 1px solid #e5e7eb; padding: 8px 0;">
+                            <span class="settlement-label">Arpita Paid:</span>
+                            <span class="settlement-value" style="font-size: 16px;">₹${Math.round(monthlyArpitaTotal).toLocaleString('en-IN')}</span>
+                        </div>
+                        
+                        <div class="settlement-row" style="border-bottom: none; padding: 8px 0; margin-top: 8px;">
+                            <span class="settlement-label" style="font-weight: 700;">
+                                ${monthlyArpitaOwes > 0 ? 'Arpita owes:' : monthlyChandanOwes > 0 ? 'Chandan owes:' : 'All clear:'}
+                            </span>
+                            <span class="settlement-value" style="font-size: 18px; color: ${monthlyArpitaOwes > 0 || monthlyChandanOwes > 0 ? '#ef4444' : '#10b981'};">
+                                ₹${Math.round(Math.max(monthlyArpitaOwes, monthlyChandanOwes)).toLocaleString('en-IN')}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Travel Expense Section -->
+                    <div style="background: #fffbeb; padding: 16px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #fde68a;">
+                        <h4 style="font-size: 16px; font-weight: 700; color: #f59e0b; margin-bottom: 12px;">✈️ Travel Expense</h4>
+                        
+                        <div class="settlement-row" style="border-bottom: 1px solid #fde68a; padding: 8px 0;">
+                            <span class="settlement-label">Chandan Paid:</span>
+                            <span class="settlement-value" style="font-size: 16px;">₹${Math.round(travelChandanTotal).toLocaleString('en-IN')}</span>
+                        </div>
+                        
+                        <div class="settlement-row" style="border-bottom: 1px solid #fde68a; padding: 8px 0;">
+                            <span class="settlement-label">Arpita Paid:</span>
+                            <span class="settlement-value" style="font-size: 16px;">₹${Math.round(travelArpitaTotal).toLocaleString('en-IN')}</span>
+                        </div>
+                        
+                        <div class="settlement-row" style="border-bottom: none; padding: 8px 0; margin-top: 8px;">
+                            <span class="settlement-label" style="font-weight: 700;">Arpita owes:</span>
+                            <span class="settlement-value" style="font-size: 18px; color: ${travelArpitaOwes > 0 ? '#ef4444' : '#10b981'};">₹${Math.round(travelArpitaOwes).toLocaleString('en-IN')}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Final Settlement -->
+                    <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 20px; border-radius: 12px; border: 3px solid #10b981;">
+                        <div class="settlement-row" style="border-bottom: none;">
+                            <span class="settlement-label" style="font-size: 15px; color: #1f2937; font-weight: 800;">
+                                ${finalOwed > 0 ? 'Arpita owes to Chandan:' : finalOwed < 0 ? 'Chandan owes to Arpita:' : 'All Clear:'}
+                            </span>
+                            <span class="settlement-value total ${settlementData.settled ? 'positive' : ''}" style="font-size: 22px;">
+                                ₹${Math.round(Math.abs(finalOwed)).toLocaleString('en-IN')}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 24px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
+                        ${currentUserName === 'Chandan' ? `
+                            <span class="settlement-status-badge ${settlementData.settled ? 'settled' : 'pending'}" onclick="${settlementData.settled ? 'toggleSettlement(\'' + displayMonth + '\')' : 'openRemarkModal(\'' + displayMonth + '\')'}">
+                                ${settlementData.settled ? 'Settled' : 'Not Settled'}
+                            </span>
+                        ` : `
+                            ${settlementData.settled ? `
+                                <span class="settlement-status-badge settled" style="cursor: default; opacity: 0.9;">
+                                    Settled
+                                </span>
+                            ` : ''}
+                        `}
+                        ${settlementData.settled && settlementData.remark ? 
+                            `<span class="settlement-remark">💬 ${settlementData.remark}</span>` : 
+                            ''
+                        }
+                        ${settlementData.settled && settlementData.settledAt ? 
+                            `<div style="margin-top: 12px; font-size: 13px; color: #10b981; font-weight: 600;">Settled on: ${new Date(settlementData.settledAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>` :
+                            ''
+                        }
+                    </div>
+                    
+                    ${Math.abs(finalOwed) < 1 ? `
+                        <div style="text-align: center; margin-top: 20px; padding: 20px; background: #f0fdf4; border-radius: 12px; border: 2px solid #10b981;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                            <div style="font-size: 18px; font-weight: 700; color: #10b981;">All Clear! No settlement needed.</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        let currentSettlementMonth = '';
+
+        function openRemarkModal(month) {
+            currentSettlementMonth = month;
+            document.getElementById('remarkInput').value = '';
+            document.getElementById('remarkModal').classList.add('active');
+        }
+
+        function closeRemarkModal() {
+            document.getElementById('remarkModal').classList.remove('active');
+            currentSettlementMonth = '';
+        }
+
+        // Helper function to calculate settlement data for a given month
+        function calculateSettlementData(month) {
+            // Calculate Monthly (Expense) - Both pay 50/50
+            const monthlyExpenses = expenses.filter(e => {
+                if (e.type !== 'monthly') return false;
+                const expenseDate = new Date(e.date);
+                const expenseMonth = expenseDate.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                return expenseMonth === month;
+            });
+            
+            let monthlyChandanTotal = 0;
+            let monthlyArpitaTotal = 0;
+            monthlyExpenses.forEach(exp => {
+                if (exp.spentBy === 'Chandan') monthlyChandanTotal += exp.amount;
+                if (exp.spentBy === 'Arpita') monthlyArpitaTotal += exp.amount;
+            });
+            
+            const monthlyTotal = monthlyChandanTotal + monthlyArpitaTotal;
+            const monthlyHalf = monthlyTotal / 2;
+            
+            let monthlyArpitaOwes = 0;
+            let monthlyChandanOwes = 0;
+            if (monthlyChandanTotal > monthlyArpitaTotal) {
+                monthlyArpitaOwes = monthlyChandanTotal - monthlyHalf;
+            } else if (monthlyArpitaTotal > monthlyChandanTotal) {
+                monthlyChandanOwes = monthlyArpitaTotal - monthlyHalf;
+            }
+            
+            // Calculate Travel - Arpita pays 100%
+            const travelExpenses = expenses.filter(e => {
+                if (e.type !== 'travel') return false;
+                const expenseDate = new Date(e.date);
+                const expenseMonth = expenseDate.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                return expenseMonth === month;
+            });
+            
+            let travelChandanTotal = 0;
+            let travelArpitaTotal = 0;
+            travelExpenses.forEach(exp => {
+                if (exp.spentBy === 'Chandan') travelChandanTotal += exp.amount;
+                if (exp.spentBy === 'Arpita') travelArpitaTotal += exp.amount;
+            });
+            
+            const travelArpitaOwes = travelChandanTotal;
+            
+            // Calculate final settlement
+            const totalArpitaOwes = monthlyArpitaOwes + travelArpitaOwes;
+            const finalOwed = totalArpitaOwes - monthlyChandanOwes;
+            
+            // Determine who owes whom
+            let whoOwesWhom = '';
+            if (finalOwed > 0) {
+                whoOwesWhom = 'Arpita owes Chandan';
+            } else if (finalOwed < 0) {
+                whoOwesWhom = 'Chandan owes Arpita';
+            } else {
+                whoOwesWhom = 'All Clear';
+            }
+            
+            return {
+                expenseChandanPaid: monthlyChandanTotal,
+                expenseArpitaPaid: monthlyArpitaTotal,
+                expenseArpitaOwes: monthlyArpitaOwes,
+                travelChandanPaid: travelChandanTotal,
+                travelArpitaPaid: travelArpitaTotal,
+                travelArpitaOwes: travelArpitaOwes,
+                totalFinalAmount: Math.abs(finalOwed),
+                whoOwesWhom: whoOwesWhom
+            };
+        }
+
+        async function saveRemark() {
+            const remark = document.getElementById('remarkInput').value.trim();
+            if (!remark) {
+                alert('Please enter a remark');
+                return;
+            }
+            
+            const settlementData = {
+                settled: true,
+                remark: remark,
+                settledAt: new Date().toISOString()
+            };
+            
+            // Calculate all the settlement data
+            const calculationData = calculateSettlementData(currentSettlementMonth);
+            
+            await saveSettlementData(currentSettlementMonth, settlementData, calculationData);
+            closeRemarkModal();
+            // Re-render the detail view
+            await renderSettlementDetail(currentSettlementMonth);
+        }
+
+        async function toggleSettlement(month) {
+            if (confirm('Mark this as NOT settled?')) {
+                const settlementData = {
+                    settled: false,
+                    remark: '',
+                    settledAt: null
+                };
+                
+                // Calculate all the settlement data (still needed for history)
+                const calculationData = calculateSettlementData(month);
+                
+                await saveSettlementData(month, settlementData, calculationData);
+                // Re-render the detail view
+                await renderSettlementDetail(month);
+            }
+        }
+
+        // PWA Service Worker - disabled (not needed for app to work)
+
+        // Install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button after user is authenticated
+            setTimeout(() => {
+                if (document.getElementById('main-app').style.display !== 'none') {
+                    showInstallPrompt();
+                }
+            }, 3000);
+        });
+
+        function showInstallPrompt() {
+            if (deferredPrompt && !localStorage.getItem('appInstalled')) {
+                const installBanner = document.createElement('div');
+                installBanner.style.cssText = `
+                    position: fixed;
+                    bottom: 80px;
+                    left: 10px;
+                    right: 10px;
+                    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+                    color: white;
+                    padding: 15px;
+                    border-radius: 15px;
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+                    z-index: 999;
+                    text-align: center;
+                    font-size: 14px;
+                `;
+                installBanner.innerHTML = `
+                    <div style="margin-bottom: 10px;">📱 Install app on your home screen?</div>
+                    <button onclick="installApp()" style="background: white; color: #11998e; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; margin-right: 10px; cursor: pointer;">Install</button>
+                    <button onclick="dismissInstall()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">Later</button>
+                `;
+                document.body.appendChild(installBanner);
+                window.installBanner = installBanner;
+            }
+        }
+
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('App installed');
+                        localStorage.setItem('appInstalled', 'true');
+                    }
+                    deferredPrompt = null;
+                    if (window.installBanner) {
+                        window.installBanner.remove();
+                    }
+                });
+            }
+        }
+
+
+        /* ── Card-from-deck form functions ── */
+        function openInlineForm() {
+            const mask = document.getElementById('card-mask');
+
+            // Settlement tab has no expense form — don't open the card
+            if (currentTab === 'settlement') {
+                return;
+            }
+
+            // If card already open — toggle: retract if empty, ignore if dirty
+            if (mask.classList.contains('open')) {
+                if (!isCardDirty()) {
+                    closeInlineForm();
+                }
+                return;
+            }
+
+            // Set today's date
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('if-date').value = `${yyyy}-${mm}-${dd}`;
+
+            // Pre-select Type based on the currently active tab
+            const typeSelect = document.getElementById('if-expense-type');
+            typeSelect.value = currentTab;
+            ifUpdateCategories();
+
+            // Measure actual card height so mask grows to the exact size
+            const card = document.querySelector('.inline-form');
+            const h = card.scrollHeight;
+            mask.style.setProperty('--card-h', h + 'px');
+
+            // Slide card down — bottom (Save/Cancel) appears first, top last
+            mask.classList.remove('closing');
+            mask.classList.add('open');
+            document.getElementById('card-connector').classList.add('visible');
+
+            // Lock page, make only background content independently scrollable
+            document.body.classList.add('card-open');
+
+            // Blur the content behind it (not the header/tabs)
+            document.getElementById('main-content-blur').classList.add('blurred');
+        }
+
+        function closeInlineForm() {
+            const mask = document.getElementById('card-mask');
+
+            // Card slides back up, retracting into the deck
+            mask.classList.remove('open');
+            mask.classList.add('closing');
+            document.getElementById('card-connector').classList.remove('visible');
+            document.body.classList.remove('card-open');
+
+            // Unblur only AFTER the card has fully retracted
+            setTimeout(() => {
+                document.getElementById('main-content-blur').classList.remove('blurred');
+            }, 300);
+
+            // Clean up after animation completes
+            setTimeout(() => {
+                mask.classList.remove('closing');
+            }, 400);
+
+            // Clear fields
+            document.getElementById('if-description').value = '';
+            document.getElementById('if-amount').value = '';
+        }
+
+        function ifUpdateCategories() {
+            const type = document.getElementById('if-expense-type').value;
+            const categorySelect = document.getElementById('if-category');
+            let cats = [];
+            if (type === 'monthly') cats = monthlyCategories;
+            else if (type === 'travel') cats = travelCategories;
+            else cats = personalCategories;
+            categorySelect.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        async function saveInlineForm() {
+            const type = document.getElementById('if-expense-type').value;
+            const date = document.getElementById('if-date').value;
+            const category = document.getElementById('if-category').value;
+            const description = document.getElementById('if-description').value.trim();
+            const amount = parseFloat(document.getElementById('if-amount').value);
+            const mode = document.getElementById('if-mode').value;
+
+            if (!date || !category || !amount || amount <= 0) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            const saveBtn = document.querySelector('.btn-save');
+
+            try {
+                saveBtn.textContent = 'Saving...';
+                saveBtn.disabled = true;
+
+                await db.collection('expenses').add({
+                    type, date, category, description, amount,
+                    spentBy: currentUserName,
+                    mode,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Reset button BEFORE closing so it's ready for next open
+                saveBtn.textContent = 'Save Expense';
+                saveBtn.disabled = false;
+
+                closeInlineForm();
+                await loadExpenses();
+            } catch (error) {
+                alert('Error saving: ' + error.message);
+                saveBtn.textContent = 'Save Expense';
+                saveBtn.disabled = false;
+            }
+        }
+
+        function dismissInstall() {
+            if (window.installBanner) {
+                window.installBanner.remove();
+            }
+        }
+
+        function toggleShowAll(type) {
+            showAllTransactionsMap[type] = !showAllTransactionsMap[type];
+            updateDisplay();
+        }
+
+        function openMonthSelector() {
+            // Get all unique months from expenses
+            const months = new Set();
+            expenses.forEach(exp => {
+                const expDate = new Date(exp.date);
+                const monthYear = expDate.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                months.add(monthYear);
+            });
+
+            // Sort months (newest first)
+            const sortedMonths = Array.from(months).sort((a, b) => {
+                const dateA = new Date(a);
+                const dateB = new Date(b);
+                return dateB - dateA;
+            });
+
+            // Get current month
+            const now = new Date();
+            const currentMonth = now.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+
+            // Build month options
+            const monthOptionsHTML = sortedMonths.map(month => {
+                // Calculate total for this month
+                const monthExpenses = expenses.filter(exp => {
+                    const expDate = new Date(exp.date);
+                    const expMonth = expDate.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                    return expMonth === month;
+                });
+                const total = monthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                
+                const isCurrent = month === currentMonth;
+                
+                return `
+                    <div class="month-option" onclick="selectMonth('${month}')">
+                        <div class="month-option-name">
+                            ${month}
+                            ${isCurrent ? '<span class="current-month-indicator">Current</span>' : ''}
+                        </div>
+                        <div class="month-option-total">Total: ₹${total.toLocaleString('en-IN')}</div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('month-options').innerHTML = monthOptionsHTML || '<div class="empty-state">No expense history yet</div>';
+            document.getElementById('month-selector').classList.add('active');
+        }
+
+        function closeMonthSelector() {
+            document.getElementById('month-selector').classList.remove('active');
+        }
+
+        function selectMonth(month) {
+            currentViewMonth = month;
+            closeMonthSelector();
+            updateDisplay();
+            
+            // Show back button
+            document.getElementById('back-to-current-btn').style.display = 'block';
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        function backToCurrentMonth() {
+            currentViewMonth = null;
+            updateDisplay();
+            
+            // Hide back button
+            document.getElementById('back-to-current-btn').style.display = 'none';
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+        // Download Clean Excel Data (Multiple Sheets)
+        async function downloadExpenseData() {
+            try {
+                // Get all settlements
+                const settlementDocs = await db.collection('settlements').get();
+                const settlements = {};
+                settlementDocs.forEach(doc => {
+                    settlements[doc.id] = doc.data();
+                });
+                
+                // Organize expenses by month and type
+                const organized = {};
+                expenses.forEach(exp => {
+                    const date = new Date(exp.date);
+                    const month = date.toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+                    
+                    if (!organized[month]) organized[month] = {};
+                    if (!organized[month][exp.type]) organized[month][exp.type] = [];
+                    organized[month][exp.type].push(exp);
+                });
+                
+                // Create workbook data
+                const sheets = {};
+                
+                // Create Settlements sheet first
+                const allMonths = Object.keys(organized).sort((a, b) => {
+                    const dateA = new Date(a + ' 1');
+                    const dateB = new Date(b + ' 1');
+                    return dateB - dateA;
+                });
+                
+                const settlementRows = [
+                    ['Month', 'Expense_Chandan_Paid', 'Expense_Arpita_Paid', 'Expense_Arpita_Owes',
+                     'Travel_Chandan_Paid', 'Travel_Arpita_Paid', 'Travel_Arpita_Owes',
+                     'Total_Final_Amount', 'Who_Owes_Whom', 'Settled', 'Remark', 'Settled_Date']
+                ];
+                
+                allMonths.forEach(month => {
+                    const monthData = organized[month];
+                    
+                    // Calculate Monthly (50/50)
+                    const monthlyExp = monthData.monthly || [];
+                    const monthlyChandanPaid = monthlyExp.filter(e => e.spentBy === 'Chandan').reduce((s, e) => s + e.amount, 0);
+                    const monthlyArpitaPaid = monthlyExp.filter(e => e.spentBy === 'Arpita').reduce((s, e) => s + e.amount, 0);
+                    const monthlyTotal = monthlyChandanPaid + monthlyArpitaPaid;
+                    const monthlyHalf = monthlyTotal / 2;
+                    const monthlyArpitaOwes = monthlyChandanPaid > monthlyArpitaPaid ? monthlyChandanPaid - monthlyHalf : 0;
+                    
+                    // Calculate Travel (Arpita pays 100%)
+                    const travelExp = monthData.travel || [];
+                    const travelChandanPaid = travelExp.filter(e => e.spentBy === 'Chandan').reduce((s, e) => s + e.amount, 0);
+                    const travelArpitaPaid = travelExp.filter(e => e.spentBy === 'Arpita').reduce((s, e) => s + e.amount, 0);
+                    const travelArpitaOwes = travelChandanPaid;
+                    
+                    const totalOwes = monthlyArpitaOwes + travelArpitaOwes;
+                    const whoOwes = totalOwes > 0 ? 'Arpita owes Chandan' : 'All Clear';
+                    
+                    const settlement = settlements[month] || { settled: false, remark: '', settledAt: '' };
+                    
+                    settlementRows.push([
+                        month,
+                        Math.round(monthlyChandanPaid * 100) / 100,
+                        Math.round(monthlyArpitaPaid * 100) / 100,
+                        Math.round(monthlyArpitaOwes * 100) / 100,
+                        Math.round(travelChandanPaid * 100) / 100,
+                        Math.round(travelArpitaPaid * 100) / 100,
+                        Math.round(travelArpitaOwes * 100) / 100,
+                        Math.round(totalOwes * 100) / 100,
+                        whoOwes,
+                        settlement.settled ? 'Yes' : 'No',
+                        settlement.remark || '',
+                        settlement.settledAt || ''
+                    ]);
+                });
+                
+                sheets['Settlements'] = settlementRows;
+                
+                // Create expense sheets
+                const typeNames = { 'monthly': 'Expense', 'travel': 'Travel Expense', 'personal': 'Personal' };
+                
+                allMonths.forEach(month => {
+                    ['monthly', 'travel', 'personal'].forEach(type => {
+                        if (!organized[month][type] || organized[month][type].length === 0) return;
+                        
+                        const sheetName = `${typeNames[type]} - ${month}`;
+                        const rows = [['Date', 'Category', 'Description', 'Spent By', 'Mode', 'Amount']];
+                        
+                        organized[month][type]
+                            .sort((a, b) => new Date(b.date) - new Date(a.date))
+                            .forEach(exp => {
+                                rows.push([exp.date, exp.category, exp.description, exp.spentBy, exp.mode, Math.round(exp.amount * 100) / 100]);
+                            });
+                        
+                        // Add total
+                        const total = organized[month][type].reduce((s, e) => s + e.amount, 0);
+                        rows.push(['', '', '', '', 'TOTAL', Math.round(total * 100) / 100]);
+                        
+                        sheets[sheetName] = rows;
+                    });
+                });
+                
+                // Create Excel using SheetJS
+                const ws = XLSX.utils.book_new();
+                
+                Object.entries(sheets).forEach(([name, data]) => {
+                    const worksheet = XLSX.utils.aoa_to_sheet(data);
+                    XLSX.utils.book_append_sheet(ws, worksheet, name);
+                });
+                
+                const fileName = `Expenses-Export-${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(ws, fileName);
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Error downloading data: ' + error.message);
+            }
+        }
+    </script>
+
+</body>
+</html>
